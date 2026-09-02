@@ -84,6 +84,13 @@ def utilisateur_courant(authorization: str = Header(None)) -> dict:
     return _user_dict(row)
 
 
+@app.get("/")
+def racine():
+    """Evite un 404 sur la racine : sonde de disponibilite des hebergeurs et
+    cible d'un eventuel ping anti-veille."""
+    return {"service": "scorex-central", "docs": "/docs", "sante": "/health"}
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "service": "scorex-central", "time": now(),
@@ -120,9 +127,13 @@ ACTIVITE_COLS = ["id", "conseiller_id", "conseiller_nom", "agence", "action", "c
 def _upsert(table: str, cols: list[str], key: str, rows: list[dict], lww: bool) -> int:
     n = 0
     place = ",".join("?" * len(cols))
+    # Toutes les tables n'ont pas de colonne sync_etat : `clients` n'en a pas.
+    # L'indice est donc calcule une fois, et seulement si la colonne existe.
+    i_sync = cols.index("sync_etat") if "sync_etat" in cols else None
     for r in rows:
         vals = [r.get(c) for c in cols]
-        vals[cols.index("sync_etat")] = "synchronise" if "sync_etat" in cols else None
+        if i_sync is not None:
+            vals[i_sync] = "synchronise"
         existing = DB.execute(f"SELECT * FROM {table} WHERE {key} = ?", (r.get(key),)).fetchone()
         if existing is None:
             DB.execute(f"INSERT INTO {table} ({','.join(cols)}) VALUES ({place})", vals)
@@ -140,12 +151,19 @@ def sync_push(body: SyncIn, user: dict = Depends(utilisateur_courant)):
     # Le verrou serialise les poussees concurrentes entre elles et vis-a-vis de
     # l'instantane pris par la persistance distante.
     with VERROU:
-        recu = {
-            "clients": _upsert("clients", CLIENT_COLS, "id_client", body.clients, lww=True),
-            "analyses": _upsert("analyses", ANALYSE_COLS, "id", body.analyses, lww=True),
-            "activites": _upsert("activite", ACTIVITE_COLS, "id", body.activites, lww=False),
-        }
-        commit()
+        try:
+            recu = {
+                "clients": _upsert("clients", CLIENT_COLS, "id_client", body.clients, lww=True),
+                "analyses": _upsert("analyses", ANALYSE_COLS, "id", body.analyses, lww=True),
+                "activites": _upsert("activite", ACTIVITE_COLS, "id", body.activites, lww=False),
+            }
+            commit()
+        except Exception as err:  # noqa: BLE001
+            # Tout ou rien : sans ce rollback, les lignes deja inserees resteraient
+            # dans la transaction ouverte et seraient validees par la poussee suivante.
+            DB.rollback()
+            print(f"[sync] echec de la poussee : {err!r}", flush=True)
+            raise HTTPException(500, f"Echec de synchronisation : {err}") from err
     return {"recus": recu, "server_time": now()}
 
 

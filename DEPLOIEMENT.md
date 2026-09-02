@@ -113,15 +113,19 @@ la promesse tient :
 
 ## 5. Pointer l'application sur le serveur
 
-Au lancement ou à la compilation :
+L'URL du service est déjà la valeur par défaut de `urlServeurDefaut`, dans
+`scorex_app/lib/data/sync.dart` : `flutter run -d windows` et
+`flutter build windows --release` visent donc le serveur en ligne sans rien
+préciser.
+
+Pour viser un serveur lancé sur le poste, ou un autre déploiement :
 
 ```bash
-flutter run -d windows --dart-define=SCOREX_SERVEUR_URL=https://<votre-service>.onrender.com
-flutter build windows --release --dart-define=SCOREX_SERVEUR_URL=https://<votre-service>.onrender.com
+flutter run -d windows --dart-define=SCOREX_SERVEUR_URL=http://127.0.0.1:8500
 ```
 
-Pour figer l'URL une fois pour toutes, remplacer la `defaultValue` de
-`urlServeurDefaut` dans `scorex_app/lib/data/sync.dart`.
+Les délais réseau s'ajustent seuls : courts en local, larges dès que l'URL n'est
+pas `127.0.0.1`, pour absorber le réveil de l'hébergeur.
 
 L'application reste évidemment fonctionnelle hors ligne : le serveur central ne
 sert qu'à la synchronisation et au tableau de bord du chef d'agence.
