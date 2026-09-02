@@ -52,10 +52,15 @@ def connect() -> sqlite3.Connection:
 DB = connect()
 
 
-def commit() -> None:
-    """Valide la transaction et signale que la base est a republier."""
+def commit(modifie: bool = True) -> None:
+    """Valide la transaction, et signale la base a republier si elle a change.
+
+    `modifie=False` pour une poussee qui n'a rien ecrit : sans cela, chaque
+    synchronisation a vide republierait la base entiere dans le depot Dataset.
+    """
     DB.commit()
-    PERSISTANCE.marquer_modifie()
+    if modifie:
+        PERSISTANCE.marquer_modifie()
 
 
 def demarrer_persistance() -> None:

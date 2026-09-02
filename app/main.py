@@ -157,7 +157,7 @@ def sync_push(body: SyncIn, user: dict = Depends(utilisateur_courant)):
                 "analyses": _upsert("analyses", ANALYSE_COLS, "id", body.analyses, lww=True),
                 "activites": _upsert("activite", ACTIVITE_COLS, "id", body.activites, lww=False),
             }
-            commit()
+            commit(modifie=any(recu.values()))
         except Exception as err:  # noqa: BLE001
             # Tout ou rien : sans ce rollback, les lignes deja inserees resteraient
             # dans la transaction ouverte et seraient validees par la poussee suivante.
