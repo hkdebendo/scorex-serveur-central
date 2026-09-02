@@ -1,0 +1,8 @@
+# Base vivante : jamais versionnee, elle est publiee dans le depot Dataset.
+data/central.sqlite
+data/central.sqlite-shm
+data/central.sqlite-wal
+
+__pycache__/
+*.pyc
+.venv/

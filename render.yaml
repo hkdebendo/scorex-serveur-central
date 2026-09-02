@@ -1,0 +1,25 @@
+# Configuration Render du serveur central Score X (Blueprint).
+#
+# A placer a la racine du depot deploye. Render lit ce fichier et cree le service
+# sans reglage manuel, hormis les deux secrets ci-dessous.
+#
+# L'offre gratuite n'a pas de disque persistant : c'est sans consequence ici,
+# puisque central.sqlite est restauree depuis le depot Dataset au demarrage et
+# republiee a chaque ecriture (voir app/persistance.py).
+services:
+  - type: web
+    name: scorex-serveur-central
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # Depot Dataset qui detient la base. A renseigner : <compte>/scorex-central-db
+      - key: SCOREX_HF_DATASET
+        sync: false
+      # Jeton Hugging Face avec droit d'ecriture. A saisir dans l'interface Render.
+      - key: HF_TOKEN
+        sync: false
+      # Delai entre une ecriture et sa publication.
+      - key: SCOREX_SAVE_DEBOUNCE
+        value: "20"

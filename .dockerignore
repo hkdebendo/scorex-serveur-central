@@ -1,0 +1,10 @@
+# La base vivante ne part jamais dans l'image : elle est restauree au demarrage
+# depuis le depot Dataset, ou recreee a partir du referentiel.
+data/central.sqlite
+data/central.sqlite-shm
+data/central.sqlite-wal
+
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
