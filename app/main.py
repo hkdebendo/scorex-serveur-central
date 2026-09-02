@@ -80,7 +80,10 @@ def utilisateur_courant(authorization: str = Header(None)) -> dict:
     uid = user_id_pour(authorization.split(" ", 1)[1])
     if uid is None:
         raise HTTPException(401, "Session expiree")
-    row = DB.execute("SELECT * FROM utilisateurs WHERE id = ?", (uid,)).fetchone()
+    row = DB.execute("SELECT * FROM utilisateurs WHERE id = ? AND actif = 1", (uid,)).fetchone()
+    if row is None:
+        # Jeton valide mais compte disparu ou desactive : 401, pas un 500 muet.
+        raise HTTPException(401, "Compte introuvable")
     return _user_dict(row)
 
 
