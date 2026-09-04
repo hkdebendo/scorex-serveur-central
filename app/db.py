@@ -46,7 +46,21 @@ def connect() -> sqlite3.Connection:
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
     con.execute("PRAGMA journal_mode = WAL")
+    _migrer(con)
     return con
+
+
+def _migrer(con: sqlite3.Connection) -> None:
+    """Ajustements de schema/donnees tolerants : ignores si deja appliques."""
+    # La decision "valide" unique a ete scindee en deux issues (montant
+    # demande / montant recommande) ; les anciens dossiers valides
+    # validaient toujours le montant recommande. Idempotent : plus aucune
+    # ligne a traiter des le premier demarrage suivant la mise a jour.
+    try:
+        con.execute("UPDATE analyses SET decision = 'valide_recommandation' WHERE decision = 'valide'")
+        con.commit()
+    except sqlite3.Error:
+        pass
 
 
 DB = connect()

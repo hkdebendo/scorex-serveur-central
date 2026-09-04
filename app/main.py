@@ -187,7 +187,10 @@ def dashboard_chef(user: dict = Depends(utilisateur_courant)):
 
     reels = "WHERE est_brouillon = 0"
     total = DB.execute(f"SELECT COUNT(*) n FROM analyses {reels}").fetchone()["n"]
-    accept = DB.execute(f"SELECT COUNT(*) n FROM analyses {reels} AND decision='valide'").fetchone()["n"]
+    accept = DB.execute(
+        f"SELECT COUNT(*) n FROM analyses {reels} AND decision IN "
+        "('valide_demande','valide_recommandation','valide')"
+    ).fetchone()["n"]
     refus = DB.execute(f"SELECT COUNT(*) n FROM analyses {reels} AND decision='refuse'").fetchone()["n"]
     revues = DB.execute(f"SELECT COUNT(*) n FROM analyses {reels} AND revue_humaine=1").fetchone()["n"]
     risque_eleve = DB.execute(f"SELECT COUNT(*) n FROM analyses {reels} AND bande='élevé'").fetchone()["n"]
@@ -200,7 +203,8 @@ def dashboard_chef(user: dict = Depends(utilisateur_courant)):
         SELECT u.id, u.nom, u.prenom, u.agence,
                COUNT(a.id)                                   AS dossiers,
                AVG(a.score)                                  AS score_moyen,
-               SUM(CASE WHEN a.decision='valide' THEN 1 ELSE 0 END)  AS acceptes,
+               SUM(CASE WHEN a.decision IN ('valide_demande','valide_recommandation','valide')
+                        THEN 1 ELSE 0 END)                    AS acceptes,
                SUM(CASE WHEN a.revue_humaine=1 THEN 1 ELSE 0 END)    AS revues
         FROM utilisateurs u
         LEFT JOIN analyses a ON a.conseiller_id = u.id AND a.est_brouillon = 0
@@ -211,7 +215,8 @@ def dashboard_chef(user: dict = Depends(utilisateur_courant)):
     perf = DB.execute(f"""
         SELECT substr(cree_le,1,10) AS jour,
                COUNT(*) AS analyses,
-               SUM(CASE WHEN decision='valide' THEN 1 ELSE 0 END) AS acceptes,
+               SUM(CASE WHEN decision IN ('valide_demande','valide_recommandation','valide')
+                        THEN 1 ELSE 0 END)                   AS acceptes,
                SUM(CASE WHEN bande='élevé' THEN 1 ELSE 0 END)     AS risque
         FROM analyses {reels}
         GROUP BY jour ORDER BY jour
@@ -227,6 +232,7 @@ def dashboard_chef(user: dict = Depends(utilisateur_courant)):
     return {
         "kpis": {
             "dossiers_analyses": total,
+            "dossiers_acceptes": accept,
             "taux_acceptation": round(100 * accept / total, 1) if total else 0,
             "taux_refus": round(100 * refus / total, 1) if total else 0,
             "score_moyen": round(score_moy) if score_moy else 0,
